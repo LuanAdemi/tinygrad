@@ -12,7 +12,7 @@ class Linear(Layer):
         if bias:
             self.B = Tensor.uniform(out)
 
-    def __call__(self, x):
+    def forward(self, x):
         if self.B is not None:
             return x.dot(self.W).add(self.B)
         else:
@@ -25,6 +25,27 @@ class Linear(Layer):
         else:
             return [self.W]
 
+# this needs to be tested
+class Conv2d(Layer):
+    def __init__(self, inChannels, outChannels, kernel_size=(3,3), bias=False):
+        self.W = Tensor.uniform(outChannels, inChannels, kernel_size[0], kernel_size[1])
+        self.B = None
+
+        if bias:
+            self.B = Tensor.uniform(1, outChannels, 1, 1)
+
+    def forward(self, x):
+        if bias:
+            return x.conv2d(self.W).add(self.B)
+        else:
+            return x.conv2d(self.W)
+
+    @property
+    def parameters(self):
+        if self.B is not None:
+            return [self.W, self.B]
+        else:
+            return [self.W]
 class RMSE(Loss):
     def __init__(self):
         super().__init__()
