@@ -1,4 +1,91 @@
 from tinygrad.tensor import Tensor
+import pickle
+from tqdm import tqdm
+from tinygrad.bases import Layer, Loss, Activation
+
+# children classes
+class Linear(Layer):
+    def __init__(self, inp, out, bias=False):
+        self.W = Tensor.uniform(inp, out)
+        self.B = None
+        
+        if bias:
+            self.B = Tensor.uniform(out)
+
+    def __call__(self, x):
+        if self.B is not None:
+            return x.dot(self.W).add(self.B)
+        else:
+            return x.dot(self.W)
+    
+    @property
+    def parameters(self):
+        if self.B is not None:
+            return [self.W, self.B]
+        else:
+            return [self.W]
+
+class RMSE(Loss):
+    def __init__(self):
+        super().__init__()
+    
+    def criterion(self, gt, out):
+        error = out.sub(gt)
+        squared_error = error.mul(error)
+        return squared_error.mean()
+        
+class Trainer:
+    """
+    A class that trains a given model with the specified optimizer and 
+    loss function
+    """
+    def __init__(self, model, optimizer, loss_fn=RMSE()):
+        self.model = model
+        self.optimizer = optimizer
+        
+        self.loss_fn = loss_fn
+        
+        self.loss_history = []
+
+    def train(self, X, Y, epochs=100):
+        with tqdm(range(epochs), unit="batch") as tepochs:
+            for epoch in tepochs:
+                tepochs.set_description(f"Epoch {epoch}")
+                
+                out = self.model(X)
+
+                loss = self.loss_fn(out, Y)
+                
+                loss.backward()
+                self.optimizer.step()
+                
+                self.loss_history.append(loss.item())
+                tepochs.set_postfix(loss=loss.item())
+        
+        return self.loss_history
+                
+class ReLU(Activation):
+    def __init__(self, leaky=False):
+        self.leaky = False
+    
+    def __call__(self, x):
+        if self.leaky:
+            return x.leakyrelu()
+        else:
+            return x.relu()
+
+class Sigmoid(Activation):
+    def __init__(self):
+        super().__init__()
+    def __call__(self, x):
+        return x.sigmoid()
+
+class Dropout:
+    def __init__(self, p=0.5):
+        self.p = p
+
+    def __call__(self, x):
+        return x.dropout(p=self.p)
 
 class BatchNorm2D:
   def __init__(self, sz, eps=1e-5, track_running_stats=False, training=False, momentum=0.1):

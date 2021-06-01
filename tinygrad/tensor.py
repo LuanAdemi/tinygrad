@@ -98,6 +98,10 @@ class Tensor:
   def dtype(self):
     return self.data.dtype
 
+
+  def item(self):
+    assert self.shape == (1,), "Only tensors with a single value can emit an item"
+    return self.data[0]
   # ***** creation helper functions *****
 
   @classmethod
